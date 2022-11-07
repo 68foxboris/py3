@@ -15,6 +15,10 @@ class IPlayer;
 class IPlayerCallback;
 class TiXmlElement;
 
+#if defined(HAS_HIPLAYER)
+  #include "cores/HiPlayer/HiPlayer.h"
+#endif
+
 class CPlayerCoreConfig
 {
 public:
@@ -47,6 +51,12 @@ public:
 
   std::shared_ptr<IPlayer> CreatePlayer(IPlayerCallback& callback) const;
 
+#if defined(HAS_HIPLAYER)
+    else if (m_type.compare("hiplayer") == 0)
+    {
+      player = std::make_shared<CHiPlayer>(callback);
+    }
+#endif
   std::string m_name;
   std::string m_id; // uuid for upnp
   std::string m_type;
