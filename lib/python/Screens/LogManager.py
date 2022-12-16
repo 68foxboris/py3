@@ -1,17 +1,17 @@
-from __future__ import print_function
 from Screens.Screen import Screen
 from Components.GUIComponent import GUIComponent
 from Components.VariableText import VariableText
 from Components.ActionMap import ActionMap
 from Components.Label import Label
-from Components.Button import Button
+from Components.Sources.StaticText import StaticText
 from Components.FileList import FileList
 from Components.MenuList import MenuList
 from Components.ScrollLabel import ScrollLabel
 from Components.config import config, configfile
 from Components.FileList import MultiFileSelectList
 from Screens.MessageBox import MessageBox
-from os import path, remove, walk, stat, rmdir
+from os import remove, walk, stat, rmdir, listdir
+from os.path import join, getsize, isdir, exists
 from time import time, ctime
 from datetime import datetime
 from enigma import eTimer, eBackgroundFileEraser, eLabel, getDesktop, gFont, fontRenderClass
@@ -19,11 +19,11 @@ from Tools.TextBoundary import getTextBoundarySize
 from glob import glob
 
 import Components.Task
+import sys
 
 # Import smtplib for the actual sending function
 import smtplib
 import base64
-import sys
 
 # Here are the email package modules we'll need
 from email.mime.multipart import MIMEMultipart
@@ -51,8 +51,8 @@ def get_size(start_path=None):
 	if start_path:
 		for dirpath, dirnames, filenames in walk(start_path):
 			for f in filenames:
-				fp = path.join(dirpath, f)
-				total_size += path.getsize(fp)
+				fp = join(dirpath, f)
+				total_size += getsize(fp)
 		return total_size
 	return 0
 
@@ -118,7 +118,7 @@ class LogManagerPoller:
 		filename = ""
 		for filename in glob(config.crash.debug_path.value + '*.log'):
 			try:
-				if path.getsize(filename) > (config.crash.debugloglimit.value * 1024 * 1024):
+				if getsize(filename) > (config.crash.debugloglimit.value * 1024 * 1024):
 					fh = open(filename, 'rb+')
 					fh.seek(-(config.crash.debugloglimit.value * 1024 * 1024), 2)
 					data = fh.read()
@@ -153,14 +153,14 @@ class LogManagerPoller:
 			config.crash.lastfulljobtrashtime.save()
 			configfile.save()
 			for mount in mounts:
-				if path.isdir(path.join(mount, 'logs')):
-					matches.append(path.join(mount, 'logs'))
-			matches.append('/home/root/logs')
+				if isdir(join(mount, 'logs')):
+					matches.append(join(mount, 'logs'))
+			matches.append(config.crash.debug_path.value)
 		else:
 			#small JobTrash (in selected log file dir only) twice a day
 			matches.append(config.crash.debug_path.value)
 
-		print("[LogManager] found following log's:", matches)
+		print("[LogManager] found following log(s):", matches)
 		if len(matches):
 			for logsfolder in matches:
 				print("[LogManager] looking in:", logsfolder)
@@ -171,7 +171,7 @@ class LogManagerPoller:
 				for root, dirs, files in walk(logsfolder, topdown=False):
 					for name in files:
 						try:
-							fn = path.join(root, name)
+							fn = join(root, name)
 							st = stat(fn)
 							#print("Logname: %s" % fn)
 							#print("Last created: %s" % ctime(st.st_ctime))
@@ -188,7 +188,7 @@ class LogManagerPoller:
 					# Remove empty directories if possible
 					for name in dirs:
 						try:
-							rmdir(path.join(root, name))
+							rmdir(join(root, name))
 						except:
 							pass
 					candidates.sort()
@@ -213,6 +213,7 @@ class LogManagerPoller:
 class LogManager(Screen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
+		self.logs = listdir(config.crash.debug_path.value)
 		self.logtype = 'crashlogs'
 
 		self['myactions'] = ActionMap(['ColorActions', 'OkCancelActions', 'DirectionActions'],
@@ -229,11 +230,14 @@ class LogManager(Screen):
 				"up": self.up
 			}, -1)
 
-		self["key_red"] = Button(_("Debug Logs"))
-		self["key_green"] = Button(_("View"))
-		self["key_yellow"] = Button(_("Delete"))
-		#self["key_blue"] = Button(_("Send"))
-
+		if self.logs:
+			self["key_red"] = StaticText(_("Debug Logs"))
+			self["key_green"] = StaticText(_("View"))
+			self["key_yellow"] = StaticText(_("Delete"))
+		else:
+			self["key_red"] = StaticText("")
+			self["key_green"] = StaticText("")
+			self["key_yellow"] = StaticText("")
 		self.onChangedEntry = []
 		self.sentsingle = ""
 		self.selectedFiles = config.logmanager.sentfiles.value
@@ -304,62 +308,71 @@ class LogManager(Screen):
 	def changelogtype(self):
 		self["LogsSize"].update(config.crash.debug_path.value)
 		import re
-		if self.logtype == 'crashlogs':
+		if self.logtype == "crashlogs":
 			self["key_red"].setText(_("Crash Logs"))
-			self.logtype = 'debuglogs'
+			self.logtype = "debuglogs"
 			self.matchingPattern = '(Enigma2|enigma2-debug)'
 		else:
 			self["key_red"].setText(_("Debug Logs"))
-			self.logtype = 'crashlogs'
+			self.logtype = "crashlogs"
 			self.matchingPattern = '(-enigma-crash.log|enigma2-crash)'
 		self["list"].matchingPattern = re.compile(self.matchingPattern)
 		self["list"].changeDir(self.defaultDir)
+		if not listdir(config.crash.debug_path.value):
+			self["key_red"].setText("")
+			self["key_green"].setText("")
+			self["key_yellow"].setText("")
 
 	def showLog(self):
-		try:
-			self.sel = self["list"].getCurrent()[0]
-		except:
-			self.sel = None
-		if self.sel:
-			self.session.open(LogManagerViewLog, self.sel[0])
+		if self.logs:
+			try:
+				self.sel = self["list"].getCurrent()[0]
+			except:
+				self.sel = None
+			if self.sel:
+				self.session.open(LogManagerViewLog, self.sel[0])
+			else:
+				self.session.open(MessageBox, _("You have not selected any logs to view."), MessageBox.TYPE_INFO, timeout=10)
 
 	def deletelog(self):
-		try:
-			self.sel = self["list"].getCurrent()[0]
-		except:
-			self.sel = None
-		self.selectedFiles = self["list"].getSelectedList()
-		if self.selectedFiles:
-			message = _("Do you want to delete all selected files:\n(choose 'No' to only delete the currently selected file.)")
-			ybox = self.session.openWithCallback(self.doDelete1, MessageBox, message, MessageBox.TYPE_YESNO)
-			ybox.setTitle(_("Delete Confirmation"))
-		elif self.sel:
-			message = _("Are you sure you want to delete this log:\n") + str(self.sel[0])
-			ybox = self.session.openWithCallback(self.doDelete3, MessageBox, message, MessageBox.TYPE_YESNO)
-			ybox.setTitle(_("Delete Confirmation"))
-		else:
-			self.session.open(MessageBox, _("You have selected no logs to delete."), MessageBox.TYPE_INFO, timeout=10)
+		if self.logs:
+			try:
+				self.sel = self["list"].getCurrent()[0]
+			except:
+				self.sel = None
+			self.selectedFiles = self["list"].getSelectedList()
+			if self.selectedFiles:
+				message = _("Do you want to delete all the selected files:\nchoose \"No\" to only delete the currently selected file.")
+				ybox = self.session.openWithCallback(self.doDelete1, MessageBox, message, MessageBox.TYPE_YESNO)
+				ybox.setTitle(_("Delete Confirmation"))
+			elif self.sel:
+				message = _("Are you sure you want to delete this log?\n") + str(self.sel[0])
+				ybox = self.session.openWithCallback(self.doDelete3, MessageBox, message, MessageBox.TYPE_YESNO)
+				ybox.setTitle(_("Delete Confirmation"))
+			else:
+				self.session.open(MessageBox, _("You have not selected any logs to delete."), MessageBox.TYPE_INFO, timeout=10)
 
 	def doDelete1(self, answer):
 		self.selectedFiles = self["list"].getSelectedList()
 		self.selectedFiles = ",".join(self.selectedFiles).replace(",", " ")
 		self.sel = self["list"].getCurrent()[0]
-		if self.sel is not None:
-			if answer is True:
-				message = _("Are you sure you want to delete all selected logs:\n") + self.selectedFiles
-				ybox = self.session.openWithCallback(self.doDelete2, MessageBox, message, MessageBox.TYPE_YESNO)
-				ybox.setTitle(_("Delete Confirmation"))
-			else:
-				message = _("Are you sure you want to delete this log:\n") + str(self.sel[0])
-				ybox = self.session.openWithCallback(self.doDelete3, MessageBox, message, MessageBox.TYPE_YESNO)
-				ybox.setTitle(_("Delete Confirmation"))
+		if answer is True:
+			message = _("Are you sure you want to delete all the selected logs:\n") + self.selectedFiles
+			ybox = self.session.openWithCallback(self.doDelete2, MessageBox, message, MessageBox.TYPE_YESNO)
+			ybox.setTitle(_("Delete Confirmation"))
+		else:
+			message = _("Are you sure you want to delete this log?\n") + str(self.sel[0])
+			ybox = self.session.openWithCallback(self.doDelete3, MessageBox, message, MessageBox.TYPE_YESNO)
+			ybox.setTitle(_("Delete Confirmation"))
 
 	def doDelete2(self, answer):
 		if answer is True:
 			self.selectedFiles = self["list"].getSelectedList()
 			self["list"].instance.moveSelectionTo(0)
-			for f in self.selectedFiles:
-				remove(f)
+			for file in self.selectedFiles:
+				if exists(file):
+					remove(file)
+					self.changelogtype()
 			config.logmanager.sentfiles.setValue("")
 			config.logmanager.sentfiles.save()
 			configfile.save()
@@ -369,8 +382,9 @@ class LogManager(Screen):
 		if answer is True:
 			self.sel = self["list"].getCurrent()[0]
 			self["list"].instance.moveSelectionTo(0)
-			if path.exists(self.defaultDir + self.sel[0]):
+			if exists(self.defaultDir + self.sel[0]):
 				remove(self.defaultDir + self.sel[0])
+				self.changelogtype()
 			self["list"].changeDir(self.defaultDir)
 			self["LogsSize"].update(config.crash.debug_path.value)
 
@@ -510,16 +524,20 @@ class LogManager(Screen):
 
 class LogManagerViewLog(Screen):
 	def __init__(self, session, selected):
-		self.session = session
 		Screen.__init__(self, session)
+		self.session = session
 		self.setTitle(selected)
 		self.logfile = config.crash.debug_path.value + selected
 		self.log = []
 		self["list"] = MenuList(self.log)
 		self["setupActions"] = ActionMap(["SetupActions", "ColorActions", "DirectionActions"],
 		{
+			"ok": self.gotoFirstPage,
 			"cancel": self.cancel,
-			"ok": self.cancel,
+			"red": self.gotoFirstPage,
+			"green": self["list"].pageDown,
+			"yellow": self["list"].pageUp,
+			"blue": self.gotoLastPage,
 			"up": self["list"].up,
 			"down": self["list"].down,
 			"right": self["list"].pageDown,
@@ -527,18 +545,21 @@ class LogManagerViewLog(Screen):
 			"moveUp": self.gotoFirstPage,
 			"moveDown": self.gotoLastPage
 		}, -2)
-
+		self["key_red"] = StaticText(_("First page"))
+		self["key_green"] = StaticText(_("Page forward"))
+		self["key_yellow"] = StaticText(_("Page back"))
+		self["key_blue"] = StaticText(_("Last page"))
 		self.onLayoutFinish.append(self.layoutFinished)
 
 	def layoutFinished(self):
 		sf = getSkinFactor()
-		font = gFont("Console", int(16 * sf))
+		font = gFont("Console", int(18 * sf))
 		if not int(fontRenderClass.getInstance().getLineHeight(font)):
-			font = gFont("Regular", int(16 * sf))
+			font = gFont("Regular", int(18 * sf))
 		self["list"].instance.setFont(font)
 		fontwidth = getTextBoundarySize(self.instance, font, self["list"].instance.size(), _(" ")).width()
 		listwidth = int(self["list"].instance.size().width() / fontwidth) - 2
-		if path.exists(self.logfile):
+		if exists(self.logfile):
 			try:
 				for line in open(self.logfile).readlines():
 					line = line.replace("\t", " " * 9)
@@ -574,7 +595,7 @@ class LogManagerViewLog(Screen):
 					else:
 						self.log.append(line)
 		else:
-			self.log = [_("file can not displayed - file not found")]
+			self.log = [_("File can not displayed - File not found")]
 		self["list"].setList(self.log)
 
 	def gotoFirstPage(self):
@@ -590,7 +611,7 @@ class LogManagerViewLog(Screen):
 class LogManagerFb(Screen):
 	def __init__(self, session, logpath=None):
 		if logpath is None:
-			if path.isdir(config.logmanager.path.value):
+			if isdir(config.logmanager.path.value):
 				logpath = config.logmanager.path.value
 			else:
 				logpath = "/"
@@ -667,6 +688,7 @@ class LogInfo(VariableText, GUIComponent):
 	def __init__(self, path, type, update=True):
 		GUIComponent.__init__(self)
 		VariableText.__init__(self)
+		self.logs = listdir(path)
 		self.type = type
 # 		self.path = config.crash.debug_path.value
 		if update:
@@ -686,7 +708,7 @@ class LogInfo(VariableText, GUIComponent):
 					total_size = _("%d MB") % (total_size >> 20)
 				else:
 					total_size = _("%d GB") % (total_size >> 30)
-				self.setText(_("Space used:") + " " + total_size)
+				self.setText(_("Exist are debug or crash files.\nSpace used:") + " " + total_size) if self.logs and get_size(path) > 0 else self.setText(_("Exist are no debug files or crash."))
 			except:
 				# occurs when f_blocks is 0 or a similar error
 				self.setText("-?-")
