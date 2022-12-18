@@ -1,6 +1,6 @@
 import os
 from Tools.HardwareInfo import HardwareInfo
-from Tools.Directories import SCOPE_SKIN, resolveFilename
+from Tools.Directories import SCOPE_CURRENT_SKIN, resolveFilename
 
 
 class RcModel:
@@ -10,14 +10,14 @@ class RcModel:
 		self.model = HardwareInfo().get_device_model()
 		# cfg files has modelname  rcname entries.
 		# modelname is boxname optionally followed by .rctype
-		for line in open((resolveFilename(SCOPE_SKIN, 'rc_models/rc_models.cfg')), 'r'):
+		for line in open((resolveFilename(SCOPE_CURRENT_SKIN, 'rc_models/rc_models.cfg')), 'r'):
 			if line.startswith(self.model):
 				m, r = line.strip().split()
 				self.RcModels[m] = r
 
 	def rcIsDefault(self):
 		# Default RC can only happen with DMM type remote controls...
-		return self.model.startswith('dm')
+		return self.model.startswith('dm1')
 
 	def getRcFile(self, ext):
 		# check for rc/type every time so rctype changes will be noticed
@@ -32,10 +32,10 @@ class RcModel:
 		elif self.model in self.RcModels.keys():
 			remote = self.RcModels[self.model]
 		else:
-			remote = 'dmm'	# default. Assume files for dmm exists
-		f = resolveFilename(SCOPE_SKIN, 'rc_models/' + remote + '.' + ext)
+			remote = 'dmm1'	# default. Assume files for dmm exists
+		f = resolveFilename(SCOPE_CURRENT_SKIN, 'rc_models/' + remote + '.' + ext)
 		if not os.path.exists(f):
-			f = resolveFilename(SCOPE_SKIN, 'rc_models/dmm.' + ext)
+			f = resolveFilename(SCOPE_CURRENT_SKIN, 'rc_models/dmm1.' + ext)
 		return f
 
 	def getRcImg(self):

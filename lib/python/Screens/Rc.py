@@ -4,7 +4,7 @@ from xml.etree.ElementTree import ElementTree
 from Components.config import config, ConfigInteger
 from Components.RcModel import rc_model
 
-config.misc.rcused = ConfigInteger(default=1)
+#config.misc.rcused = ConfigInteger(default=1)
 
 
 class Rc:
@@ -15,7 +15,7 @@ class Rc:
 		self["arrowup"] = MovingPixmap()
 		self["arrowup2"] = MovingPixmap()
 
-		config.misc.rcused = ConfigInteger(default=1)
+#		config.misc.rcused = ConfigInteger(default=1)
 		self.isDefaultRc = rc_model.rcIsDefault()
 		self.rcheight = 500
 		self.rcheighthalf = 250
@@ -36,7 +36,7 @@ class Rc:
 
 	def readPositions(self):
 		if self.isDefaultRc:
-			target = resolveFilename(SCOPE_SKIN, "rcpositions.xml")
+			target = resolveFilename(SCOPE_CURRENT_SKIN, "rcpositions.xml")
 		else:
 			target = rc_model.getRcPositions()
 		tree = ElementTree(file=target)
