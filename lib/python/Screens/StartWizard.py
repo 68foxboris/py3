@@ -3,7 +3,7 @@ from Screens.Screen import Screen
 from Screens.MessageBox import MessageBox
 from Screens.WizardLanguage import WizardLanguage
 from Screens.Time import TimeWizard
-from Screens.Rc import Rc
+from Screens.HelpMenu import Rc
 from Tools.HardwareInfo import HardwareInfo
 try:
 	from Plugins.SystemPlugins.OSDPositionSetup.overscanwizard import OverscanWizard

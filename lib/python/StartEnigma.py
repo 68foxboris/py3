@@ -17,6 +17,11 @@ from Components.config import config, configfile, ConfigText, ConfigYesNo, Confi
 
 from traceback import print_exc
 
+# config.plugins needs to be defined before InputDevice < HelpMenu < MessageBox < InfoBar.
+config.plugins = ConfigSubsection()
+config.plugins.remotecontroltype = ConfigSubsection()
+config.plugins.remotecontroltype.rctype = ConfigInteger(default=0)
+
 # New Plugin Style
 config.misc.plugin_style = ConfigSelection(default="normallstyle", choices=[
 	("normallstyle", _("Normall Style")),
