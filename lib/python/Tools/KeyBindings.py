@@ -1,6 +1,5 @@
 from keyids import KEYIDS
 from Components.config import config
-from Components.RcModel import rc_model
 
 keyBindings = {}
 
@@ -161,14 +160,17 @@ keyDescriptions = [{  # id=0 - dmm0 remote directory, DM8000.
 	KEYIDS["KEY_F1"]: ("F1",),
 	KEYIDS["KEY_F2"]: ("F2",),
 	KEYIDS["KEY_F3"]: ("F3",),
+	KEYIDS["KEY_F4"]: ("F4",),
 	KEYIDS["KEY_FASTFORWARD"]: ("FASTFORWARD",),
 	KEYIDS["KEY_FAVORITES"]: ("FAV",),
 	KEYIDS["KEY_FILE"]: ("LIST",),
 	KEYIDS["KEY_GREEN"]: ("GREEN",),
+	KEYIDS["KEY_GOTO"]: ("GOTO",),
 	KEYIDS["KEY_HELP"]: ("HELP",),
 	KEYIDS["KEY_HOME"]: ("HOME",),
 	KEYIDS["KEY_HOMEPAGE"]: ("HOMEPAGE",),
 	KEYIDS["KEY_INFO"]: ("INFO",),
+	KEYIDS["KEY_KEYBOARD"]: ("KEYBOARD",),
 	KEYIDS["KEY_LAST"]: ("BACK",),
 	KEYIDS["KEY_LEFT"]: ("LEFT",),
 	KEYIDS["KEY_LIST"]: ("PLAYLIST",),
@@ -357,10 +359,9 @@ def removeKeyBinding(key, context, action, wild=True):
 		else:
 			del keyBindings[contextAction]
 
+
 # Returns a list of (key, flags) for a specified action.
 #
-
-
 def queryKeyBinding(context, action):
 	if (context, action) in keyBindings:
 		return [(x[0], x[2]) for x in keyBindings[(context, action)]]
@@ -369,27 +370,23 @@ def queryKeyBinding(context, action):
 
 
 def getKeyDescription(key):
-	if rc_model.rcIsDefault():
-		idx = config.misc.rcused.value
+	rcType = config.inputDevices.rcType.value
+	# print("[KeyBindings] RC type is '%s'." % rcType)
+	if rcType == 14:  # XP1000
+		idx = 3
+	elif rcType == 18:  # F1
+		idx = 4
 	else:
-		rcType = config.plugins.remotecontroltype.rctype.value
-		# rcType = config.misc.inputdevices.rcType.value
-		if rcType == 14:  # XP1000
-			idx = 3
-		elif rcType == 18:  # F1
-			idx = 4
-		else:
-			idx = 2
-	return keyDescriptions[idx].get(key)
+		idx = 2
+	return keyDescriptions[idx].get(key, ("None",))
 
 
 def getKeyBindingKeys(filterfn=lambda key: True):
-	return list(filter(filterfn, keyBindings))
+	return filter(filterfn, keyBindings)
+
 
 # Remove all entries of domain "domain".
 #
-
-
 def removeKeyBindings(domain):
 	for x in keyBindings:
-		keyBindings[x] = [e for e in keyBindings[x] if e[1] != domain]
+		keyBindings[x] = filter(lambda e: e[1] != domain, keyBindings[x])
