@@ -1,11 +1,11 @@
 from os import listdir, rmdir
 from os.path import exists, isdir, join
 from bisect import insort
+from Components.ActionMap import loadKeymap
 from Tools.Directories import fileExists, resolveFilename, SCOPE_PLUGINS
 from Tools.Import import my_import
 from Tools.Profile import profile
 from Plugins.Plugin import PluginDescriptor
-import keymapparser
 
 
 class PluginComponent:
@@ -85,7 +85,7 @@ class PluginComponent:
 						keymap = join(path, "keymap.xml")
 						if fileExists(keymap):
 							try:
-								keymapparser.readKeymap(keymap)
+								loadKeymap(keymap)
 							except Exception as exc:
 								print("[PluginComponent] keymap for plugin %s/%s failed to load: " % (c, pluginname), exc)
 								self.warnings.append((c + "/" + pluginname, str(exc)))
