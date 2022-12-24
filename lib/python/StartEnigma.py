@@ -17,6 +17,12 @@ from Components.config import config, configfile, ConfigText, ConfigYesNo, Confi
 
 from traceback import print_exc
 
+
+# config.plugins needs to be defined before InputDevice < HelpMenu < MessageBox < InfoBar.
+config.plugins = ConfigSubsection()
+config.plugins.remotecontroltype = ConfigSubsection()
+config.plugins.remotecontroltype.rctype = ConfigInteger(default=0)
+
 # New Plugin Style
 config.misc.plugin_style = ConfigSelection(default="normallstyle", choices=[
 	("normallstyle", _("Normall Style")),
@@ -633,10 +639,9 @@ profile("Timezones")
 import Components.Timezones
 Components.Timezones.InitTimeZones()
 
-profile("keymapparser")
-import keymapparser
-keymapparser.readKeymap(config.usage.keymap.value)
-keymapparser.readKeymap(config.usage.keytrans.value)
+profile("LoadKeymap")
+from Components.ActionMap import loadKeymap
+loadKeymap(config.usage.keymap.value)
 
 profile("Network")
 import Components.Network
@@ -670,9 +675,6 @@ Screens.Ci.InitCiConfig()
 profile("Init:LogManager")
 import Screens.LogManager
 Screens.LogManager.AutoLogManager()
-
-profile("RcModel")
-import Components.RcModel
 
 profile("Init:PowerOffTimer")
 from Components.PowerOffTimer import powerOffTimer
