@@ -15,7 +15,7 @@ from Screens.HelpMenu import HelpableScreen
 from Screens.MessageBox import MessageBox
 from Screens.Screen import Screen
 from Screens.Standby import TryQuitMainloop, QUIT_RESTART
-from Tools.Directories import resolveFilename, SCOPE_CURRENT_SKIN, SCOPE_LCDSKIN, SCOPE_SKIN
+from Tools.Directories import resolveFilename, SCOPE_CURRENT_SKIN, SCOPE_LCDSKIN, SCOPE_SKIN, fileReadXML
 
 
 class SkinSelector(Screen, HelpableScreen):
@@ -95,7 +95,6 @@ class SkinSelector(Screen, HelpableScreen):
 		default = _("Default")
 		defaultPicon = _("Default+Picon")
 		current = _("Current")
-		pending = _("Pending restart")
 		displayPicon = pathjoin(dirname(DEFAULT_DISPLAY_SKIN), "skin_display_picon.xml")
 		skinList = []
 		# Find and list the available skins...
@@ -104,6 +103,8 @@ class SkinSelector(Screen, HelpableScreen):
 			for skinFile in self.xmlList:
 				skin = pathjoin(dir, skinFile)
 				skinPath = pathjoin(self.rootDir, skin)
+				parseDone = fileReadXML(skinPath)
+				parseError = _("File error %s") % skin
 				if exists(skinPath):
 					resolution = None
 					if skinFile == "skin.xml":
@@ -138,10 +139,16 @@ class SkinSelector(Screen, HelpableScreen):
 						list = [dir, defaultPicon, dir, skin, resolution, preview]
 					else:
 						list = [dir, "", dir, skin, resolution, preview]
-					if skin == self.current:
+					if not parseDone:
+						list[1] = parseError
+					elif skin == self.current and "fallback" in skin:
+						list[1] = "%s %s" % (current, emergency)
+					elif skin == self.current and EMERGENCY_NAME in skin:
 						list[1] = current
-					elif skin == self.config.value:
-						list[1] = pending
+					elif skin != self.current and EMERGENCY_NAME in skin:
+						list[1] = default
+					elif skin == self.current:
+						list[1] = current
 					list.append("%s (%s)" % (list[0], list[1]) if list[1] else list[0])
 					if list[1]:
 						list[1] = "<%s>" % list[1]
