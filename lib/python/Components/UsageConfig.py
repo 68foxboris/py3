@@ -20,6 +20,13 @@ visuallyImpairedCommentary = "NAR qad"
 
 def InitUsageConfig():
 	config.usage = ConfigSubsection()
+	if isfile("/etc/crontab") and not fileContains("/etc/crontab", "registry.arm.bin"):
+		if os.path.isfile("/home/root/.cache/gstreamer-1.0/registry.arm.bin"):
+			Console().ePopen("sed -i '$a@reboot root rm -f /home/root/.cache/gstreamer-1.0/registry.arm.bin' /etc/crontab")
+		elif os.path.isfile("/home/root/.cache/gstreamer-0.10/registry.arm.bin"):
+			Console().ePopen("sed -i '$a@reboot root rm -f /home/root/.cache/gstreamer-0.10/registry.arm.bin' /etc/crontab")
+		else:
+			print("[UsageConfig] No registry.arm.bin?")
 	config.usage.subnetwork = ConfigYesNo(default=True)
 	config.usage.subnetwork_cable = ConfigYesNo(default=True)
 	config.usage.subnetwork_terrestrial = ConfigYesNo(default=True)
