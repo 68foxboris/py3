@@ -51,6 +51,8 @@ def InitUsageConfig():
 
 	config.usage.alternative_number_mode = ConfigYesNo(default=False)
 
+	config.misc.usegstplaybin3 = ConfigYesNo(default=False)
+
 	def alternativeNumberModeChange(configElement):
 		eDVBDB.getInstance().setNumberingMode(configElement.value)
 		refreshServiceList()
