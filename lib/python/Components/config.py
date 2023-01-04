@@ -5,7 +5,7 @@ from Components.Harddisk import harddiskmanager
 from Tools.LoadPixmap import LoadPixmap
 import copy
 import os
-from time import localtime, strftime
+from time import localtime, strftime, struct_time
 
 # ConfigElement, the base class of all ConfigElements.
 
@@ -835,21 +835,21 @@ class ConfigClock(ConfigSequence):
 					pmadjust = 12
 				if hour == 0:  # 12AM & 12PM map to 12.
 					hour = 12
-				if self.markedPos == 0 and digit >= 2:  # Only 0, 1 allowed (12 hour clock).
+				if self.marked_pos == 0 and digit >= 2:  # Only 0, 1 allowed (12 hour clock).
 					return
-				if self.markedPos == 1 and hour > 9 and digit >= 3:  # Only 10, 11, 12 allowed.
+				if self.marked_pos == 1 and hour > 9 and digit >= 3:  # Only 10, 11, 12 allowed.
 					return
-				if self.markedPos == 1 and hour < 10 and digit == 0:  # Only 01, 02, ..., 09 allowed.
+				if self.marked_pos == 1 and hour < 10 and digit == 0:  # Only 01, 02, ..., 09 allowed.
 					return
 			else:
-				if self.markedPos == 0 and digit >= 3:  # Only 0, 1, 2 allowed (24 hour clock).
+				if self.marked_pos == 0 and digit >= 3:  # Only 0, 1, 2 allowed (24 hour clock).
 					return
-				if self.markedPos == 1 and hour > 19 and digit >= 4:  # Only 20, 21, 22, 23 allowed.
+				if self.marked_pos == 1 and hour > 19 and digit >= 4:  # Only 20, 21, 22, 23 allowed.
 					return
-			if self.markedPos == 2 and digit >= 6:  # Only 0, 1, ..., 5 allowed (tens digit of minutes).
+			if self.marked_pos == 2 and digit >= 6:  # Only 0, 1, ..., 5 allowed (tens digit of minutes).
 				return
 			value = bytearray(b"%02d%02d" % (hour, self._value[1]))  # Must be ASCII!
-			value[self.markedPos] = digit + ord(b"0")
+			value[self.marked_pos] = digit + ord(b"0")
 			hour = int(value[:2])
 			minute = int(value[2:])
 			if config.usage.time.wide.value:
@@ -862,7 +862,7 @@ class ConfigClock(ConfigSequence):
 				hour = 20
 			self._value[0] = hour
 			self._value[1] = minute
-			self.markedPos += 1
+			self.marked_pos += 1
 			self.validate()
 			self.changed()
 		else:
@@ -891,10 +891,10 @@ class ConfigClock(ConfigSequence):
 		self.changed()  # Trigger change.
 
 	def genText(self):
-		mPos = self.markedPos
+		mPos = self.marked_pos
 		if mPos >= 2:
 			mPos += 1  # Skip over the separator.
-		newtime = list(self.time)
+		newtime = list(self.t)
 		newtime[3] = self._value[0]
 		newtime[4] = self._value[1]
 		newtime = struct_time(newtime)
